@@ -33,8 +33,8 @@ type ReadPageData struct {
 }
 
 var works = []Work{
-	{Title: "Pascal's Pensées", File: "Pascal's Pensées.txt"},
-	{Title: "Thus Spake Zarathustra", File: "Thus Spake Zarathustra: A Book for All and None.txt"},
+	{Title: "Pascal's Pensées", File: "texts/Pascal's Pensées.txt"},
+	{Title: "Thus Spake Zarathustra", File: "texts/Thus Spake Zarathustra: A Book for All and None.txt"},
 }
 
 var parsedWorks = make(map[string]Work)
@@ -104,8 +104,14 @@ func main() {
 	http.HandleFunc("/breathe", breatheHandler)
 	http.HandleFunc("/read", readHandler)
 
-	// Start server
-	port := ":8080"
+	// Start server - read PORT from environment
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	if !strings.HasPrefix(port, ":") {
+		port = ":" + port
+	}
 	fmt.Printf("🚀 Server starting on http://localhost%s\n", port)
 	fmt.Println("Available endpoints:")
 	fmt.Println("  GET  /           - Home page")

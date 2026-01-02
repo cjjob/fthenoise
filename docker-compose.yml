@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  fthenoise:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fthenoise
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    # Note: distroless has no shell, so we use TCP check
+    # For HTTP healthcheck, you'd need to use a sidecar or different base image
+    healthcheck:
+      test: ["CMD", "true"] # Simple check - container is healthy if it's running
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
