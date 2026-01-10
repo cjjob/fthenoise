@@ -1,5 +1,3 @@
-.PHONY: build run stop clean docker-build docker-run docker-stop
-
 # Build the Docker image
 docker-build:
 	docker build -t fthenoise:latest .
@@ -34,4 +32,3 @@ run:
 # Test the Docker image locally
 test-docker: docker-build
 	docker run --rm -p 8080:8080 fthenoise:latest
-
