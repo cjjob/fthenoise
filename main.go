@@ -22,38 +22,33 @@ type HealthResponse struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-type Work struct {
+type Document struct {
 	Title     string   `json:"title"`
 	File      string   `json:"file"`
 	Sentences []string `json:"sentences"`
 }
 
 type ReadPageData struct {
-	WorksData template.JS
+	DocumentsData template.JS
 }
 
-var works = []Work{
-	{Title: "Pascal's Pensées", File: "texts/Pascal's Pensées.txt"},
-	{Title: "Thus Spake Zarathustra", File: "texts/Thus Spake Zarathustra: A Book for All and None.txt"},
-}
-
-var parsedWorks = make(map[string]Work)
+var parsedDocuments = make(map[string]Document)
 
 func init() {
-	// Load and parse all works on startup
-	for _, work := range works {
-		sentences, err := loadAndParseWork(work.File)
+	// Load and parse all documents on startup
+	for _, document := range documents {
+		sentences, err := loadAndParseDocument(document.File)
 		if err != nil {
-			log.Printf("Warning: Failed to load %s: %v", work.File, err)
+			log.Printf("Warning: Failed to load %s: %v", document.File, err)
 			continue
 		}
-		work.Sentences = sentences
-		parsedWorks[work.File] = work
-		log.Printf("Loaded %s: %d sentences", work.Title, len(sentences))
+		document.Sentences = sentences
+		parsedDocuments[document.File] = document
+		log.Printf("Loaded %s: %d sentences", document.Title, len(sentences))
 	}
 }
 
-func loadAndParseWork(filename string) ([]string, error) {
+func loadAndParseDocument(filename string) ([]string, error) {
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -222,20 +217,20 @@ func readHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert parsed works to a map for JSON encoding
-	worksMap := make(map[string]Work)
-	for file, work := range parsedWorks {
-		worksMap[file] = work
+	documentsMap := make(map[string]Document)
+	for file, document := range parsedDocuments {
+		documentsMap[file] = document
 	}
 
 	// Marshal to JSON and convert to template.JS for safe embedding
-	worksJSON, err := json.Marshal(worksMap)
+	documentsJSON, err := json.Marshal(documentsMap)
 	if err != nil {
 		http.Error(w, "Failed to prepare data", http.StatusInternalServerError)
 		return
 	}
 
 	data := ReadPageData{
-		WorksData: template.JS(worksJSON),
+		DocumentsData: template.JS(documentsJSON),
 	}
 
 	tmpl, err := template.ParseFiles("templates/read.html")
