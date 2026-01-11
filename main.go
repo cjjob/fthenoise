@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"regexp"
@@ -39,12 +39,18 @@ func init() {
 	for _, document := range documents {
 		sentences, err := loadAndParseDocument(document.File)
 		if err != nil {
-			log.Printf("Warning: Failed to load %s: %v", document.File, err)
+			slog.Warn("Failed to load document",
+				"file", document.File,
+				"error", err,
+			)
 			continue
 		}
 		document.Sentences = sentences
 		parsedDocuments[document.File] = document
-		log.Printf("Loaded %s: %d sentences", document.Title, len(sentences))
+		slog.Info("Loaded document",
+			"title", document.Title,
+			"sentence_count", len(sentences),
+		)
 	}
 }
 
@@ -116,7 +122,8 @@ func main() {
 	fmt.Println("  GET  /read       - Read endpoint")
 
 	if err := http.ListenAndServe(port, nil); err != nil {
-		log.Fatal("Server failed to start:", err)
+		slog.Error("Server failed to start", "error", err)
+		os.Exit(1)
 	}
 }
 
