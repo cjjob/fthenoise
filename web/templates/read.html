@@ -1,0 +1,415 @@
+{{define "read"}}
+{{template "base" .}}
+{{end}}
+
+{{define "head"}}
+<title>Read</title>
+<!-- Google Fonts for Fira Code and Open Dyslexic -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Dyslexic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+	* {
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+	}
+	body {
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+		background: #1a1a1a;
+		color: #e0e0e0;
+		display: flex;
+		flex-direction: column;
+		height: 100vh;
+		overflow: hidden;
+	}
+	#work-selector {
+		padding: 20px;
+		background: #2a2a2a;
+		border-bottom: 1px solid #3a3a3a;
+		display: flex;
+		gap: 20px;
+		align-items: center;
+		flex-wrap: wrap;
+	}
+	#work-selector select,
+	#work-selector input[type="range"] {
+		padding: 10px 15px;
+		font-size: 16px;
+		background: #3a3a3a;
+		color: #e0e0e0;
+		border: 1px solid #4a4a4a;
+		border-radius: 5px;
+		cursor: pointer;
+	}
+	#work-selector select:focus,
+	#work-selector input[type="range"]:focus {
+		outline: none;
+		border-color: #667eea;
+	}
+	.control-group {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.control-group label {
+		font-size: 14px;
+		color: #aaa;
+	}
+	#font-size-slider {
+		width: 150px;
+		height: 6px;
+		background: #3a3a3a;
+		border-radius: 3px;
+		outline: none;
+		-webkit-appearance: none;
+	}
+	#font-size-slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 18px;
+		height: 18px;
+		background: #667eea;
+		border-radius: 50%;
+		cursor: pointer;
+	}
+	#font-size-slider {
+		appearance: none;
+	}
+	#font-size-slider::-moz-range-thumb {
+		width: 18px;
+		height: 18px;
+		background: #667eea;
+		border-radius: 50%;
+		cursor: pointer;
+		border: none;
+	}
+	#font-size-value {
+		min-width: 50px;
+		text-align: right;
+		color: #e0e0e0;
+	}
+	#font-select {
+		min-width: 180px;
+	}
+	#reader {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 40px;
+		text-align: center;
+		-webkit-tap-highlight-color: transparent;
+		-webkit-touch-callout: none;
+		user-select: none;
+	}
+	@media (max-width: 768px) {
+		#reader {
+			cursor: pointer;
+			touch-action: manipulation;
+		}
+	}
+	#sentence {
+		font-size: 24px;
+		line-height: 1.6;
+		max-width: 800px;
+		color: #f0f0f0;
+		transition: font-size 0.2s ease;
+	}
+	/* Font families */
+	.font-fira-code {
+		font-family: 'Fira Code', monospace;
+	}
+	.font-open-dyslexic {
+		font-family: 'Open Dyslexic', sans-serif;
+	}
+	.font-system {
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+	}
+	#controls {
+		padding: 20px;
+		background: #2a2a2a;
+		border-top: 1px solid #3a3a3a;
+		text-align: center;
+		color: #888;
+		font-size: 14px;
+	}
+	#progress-info {
+		margin-top: 10px;
+		color: #666;
+	}
+	#progress-bar-container {
+		width: 100%;
+		max-width: 600px;
+		height: 8px;
+		background: #3a3a3a;
+		border-radius: 4px;
+		margin: 15px auto 0;
+		overflow: hidden;
+	}
+	#progress-bar {
+		height: 100%;
+		background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+		border-radius: 4px;
+		transition: width 0.3s ease;
+		width: 0%;
+	}
+	.loading {
+		color: #888;
+		font-size: 18px;
+	}
+</style>
+{{end}}
+
+{{define "content"}}
+<div id="work-selector">
+	<div class="control-group">
+		<label for="work-select">Work:</label>
+		<select id="work-select">
+			<option value="">Select a work...</option>
+		</select>
+	</div>
+	<div class="control-group">
+		<label for="font-select">Font:</label>
+		<select id="font-select">
+			<option value="system">System (Default)</option>
+			<option value="fira-code">Fira Code</option>
+			<option value="open-dyslexic">Open Dyslexic</option>
+		</select>
+	</div>
+	<div class="control-group">
+		<label for="font-size-slider">Size:</label>
+		<input type="range" id="font-size-slider" min="12" max="48" value="24" step="2">
+		<span id="font-size-value">24px</span>
+	</div>
+</div>
+<div id="reader">
+	<div id="sentence" class="loading">Select a work to begin reading</div>
+</div>
+<div id="controls">
+	<div id="controls-message">Press <strong>N(ext)</strong> for next sentence | Press <strong>B(ack)</strong> for previous sentence</div>
+	<div id="progress-info"></div>
+	<div id="progress-bar-container">
+		<div id="progress-bar"></div>
+	</div>
+</div>
+
+<script>
+	const worksData = {{ .DocumentsData }};
+	
+	let currentWork = null;
+	let currentIndex = 0;
+	let totalSentences = 0;
+	
+	// Detect if user is on mobile
+	function isMobile() {
+		return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+		       (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) ||
+		       ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+	}
+	
+	const isMobileDevice = isMobile();
+	
+	// Update controls message based on device type
+	const controlsMessage = document.getElementById('controls-message');
+	if (isMobileDevice) {
+		controlsMessage.innerHTML = 'Tap to go forward | Double tap to go back';
+	} else {
+		controlsMessage.innerHTML = 'Press <strong>N(ext)</strong> for next sentence | Press <strong>B(ack)</strong> for previous sentence';
+	}
+
+	// Populate work selector
+	const select = document.getElementById('work-select');
+	Object.keys(worksData).forEach(file => {
+		const work = worksData[file];
+		const option = document.createElement('option');
+		option.value = file;
+		option.textContent = work.title;
+		select.appendChild(option);
+	});
+
+	// Font size control
+	const fontSizeSlider = document.getElementById('font-size-slider');
+	const fontSizeValue = document.getElementById('font-size-value');
+	const sentenceElement = document.getElementById('sentence');
+	
+	fontSizeSlider.addEventListener('input', (e) => {
+		const size = e.target.value;
+		sentenceElement.style.fontSize = size + 'px';
+		fontSizeValue.textContent = size + 'px';
+		// Save to localStorage
+		localStorage.setItem('fontSize', size);
+	});
+
+	// Font selection control
+	const fontSelect = document.getElementById('font-select');
+	fontSelect.addEventListener('change', (e) => {
+		const fontClass = 'font-' + e.target.value;
+		sentenceElement.className = sentenceElement.className.replace(/font-\w+/g, '');
+		sentenceElement.classList.add(fontClass);
+		// Save to localStorage
+		localStorage.setItem('fontFamily', e.target.value);
+	});
+
+	// Load saved preferences
+	const savedFontSize = localStorage.getItem('fontSize');
+	if (savedFontSize) {
+		fontSizeSlider.value = savedFontSize;
+		sentenceElement.style.fontSize = savedFontSize + 'px';
+		fontSizeValue.textContent = savedFontSize + 'px';
+	}
+
+	const savedFontFamily = localStorage.getItem('fontFamily');
+	if (savedFontFamily) {
+		fontSelect.value = savedFontFamily;
+		const fontClass = 'font-' + savedFontFamily;
+		sentenceElement.className = sentenceElement.className.replace(/font-\w+/g, '');
+		sentenceElement.classList.add(fontClass);
+	}
+
+	// Handle work selection
+	document.getElementById('work-select').addEventListener('change', (e) => {
+		if (e.target.value) {
+			currentWork = e.target.value;
+			currentIndex = 0;
+			totalSentences = worksData[currentWork].sentences.length;
+			loadSentence();
+		} else {
+			document.getElementById('sentence').textContent = 'Select a work to begin reading';
+			document.getElementById('sentence').className = 'loading';
+			document.getElementById('progress-info').textContent = '';
+			updateProgressBar(0);
+		}
+	});
+
+	// Load a sentence
+	function loadSentence() {
+		if (!currentWork) return;
+		
+		const sentences = worksData[currentWork].sentences;
+		if (currentIndex >= 0 && currentIndex < sentences.length) {
+			document.getElementById('sentence').textContent = sentences[currentIndex];
+			document.getElementById('sentence').classList.remove('loading');
+			updateProgress();
+		}
+	}
+
+	function updateProgress() {
+		const progressInfo = document.getElementById('progress-info');
+		progressInfo.textContent = `Sentence ${currentIndex + 1} of ${totalSentences}`;
+		
+		// Update progress bar
+		const progress = totalSentences > 0 ? ((currentIndex + 1) / totalSentences) * 100 : 0;
+		updateProgressBar(progress);
+	}
+
+	function updateProgressBar(percentage) {
+		const progressBar = document.getElementById('progress-bar');
+		progressBar.style.width = percentage + '%';
+	}
+
+	// Navigation functions
+	function goNext() {
+		if (!currentWork) return;
+		if (currentIndex < totalSentences - 1) {
+			currentIndex++;
+			loadSentence();
+		}
+	}
+	
+	function goBack() {
+		if (!currentWork) return;
+		if (currentIndex > 0) {
+			currentIndex--;
+			loadSentence();
+		}
+	}
+	
+	// Keyboard navigation (desktop)
+	document.addEventListener('keydown', (e) => {
+		if (!currentWork) return;
+		
+		if ((e.key === 'n' || e.key === 'N') && !e.target.matches('select') && !e.target.matches('input')) {
+			e.preventDefault();
+			goNext();
+		} else if ((e.key === 'b' || e.key === 'B') && !e.target.matches('select') && !e.target.matches('input')) {
+			e.preventDefault();
+			goBack();
+		}
+	});
+	
+	// Touch navigation (mobile)
+	if (isMobileDevice) {
+		let lastTap = 0;
+		let tapTimeout;
+		let touchStartTime = 0;
+		
+		// Make the reader area tappable
+		const reader = document.getElementById('reader');
+		reader.style.cursor = 'pointer';
+		
+		// Handle touch events (primary for mobile)
+		reader.addEventListener('touchstart', (e) => {
+			touchStartTime = Date.now();
+		}, { passive: true });
+		
+		reader.addEventListener('touchend', (e) => {
+			e.preventDefault();
+			const touchEndTime = Date.now();
+			const touchDuration = touchEndTime - touchStartTime;
+			
+			// Only handle quick taps (less than 300ms)
+			if (touchDuration < 300) {
+				const now = Date.now();
+				const timeSinceLastTap = now - lastTap;
+				
+				// Clear any pending single tap
+				clearTimeout(tapTimeout);
+				
+				if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
+					// Double tap detected - go back
+					goBack();
+					lastTap = 0;
+				} else {
+					// Single tap - wait to see if it becomes a double tap
+					tapTimeout = setTimeout(() => {
+						goNext();
+						lastTap = 0;
+					}, 300);
+					
+					lastTap = now;
+				}
+			}
+		}, { passive: false });
+		
+		// Also handle click events as fallback (for hybrid devices)
+		reader.addEventListener('click', (e) => {
+			// Only handle if touch events didn't fire (rare case)
+			if (touchStartTime === 0) {
+				e.preventDefault();
+				
+				const now = Date.now();
+				const timeSinceLastTap = now - lastTap;
+				
+				clearTimeout(tapTimeout);
+				
+				if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
+					// Double tap detected
+					goBack();
+					lastTap = 0;
+				} else {
+					// Single tap - wait to see if it becomes a double tap
+					tapTimeout = setTimeout(() => {
+						goNext();
+						lastTap = 0;
+					}, 300);
+					
+					lastTap = now;
+				}
+			}
+			touchStartTime = 0; // Reset for next interaction
+		});
+	}
+</script>
+{{end}}

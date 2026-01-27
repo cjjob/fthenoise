@@ -3,36 +3,19 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"fthenoise/api"
+	typesgo "fthenoise/types.go"
 	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 )
 
-type Message struct {
-	Message string    `json:"message"`
-	Time    time.Time `json:"time"`
-}
-
-type HealthResponse struct {
-	Status    string    `json:"status"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
-type Document struct {
-	Title     string   `json:"title"`
-	File      string   `json:"file"`
-	Sentences []string `json:"sentences"`
-}
-
-type ReadPageData struct {
-	DocumentsData template.JS
-}
-
-var parsedDocuments = make(map[string]Document)
+var ParsedDocuments = make(map[string]typesgo.Document)
 
 func init() {
 	// Load and parse all documents on startup
@@ -46,12 +29,14 @@ func init() {
 			continue
 		}
 		document.Sentences = sentences
-		parsedDocuments[document.File] = document
+		ParsedDocuments[document.File] = document
 		slog.Info("Loaded document",
 			"title", document.Title,
 			"sentence_count", len(sentences),
 		)
 	}
+	// Set the parsed documents in the api package
+	api.ParsedDocuments = ParsedDocuments
 }
 
 func loadAndParseDocument(filename string) ([]string, error) {
@@ -100,10 +85,12 @@ func loadAndParseDocument(filename string) ([]string, error) {
 func main() {
 	// Define routes
 	http.HandleFunc("/", homeHandler)
+
+	http.HandleFunc("/example", api.ExampleHandler)
+
 	http.HandleFunc("/health", healthHandler)
-	http.HandleFunc("/api/hello", helloHandler)
-	http.HandleFunc("/breathe", breatheHandler)
-	http.HandleFunc("/read", readHandler)
+	http.HandleFunc("/breathe", api.BreatheHandler)
+	http.HandleFunc("/read", api.ReadHandler)
 
 	// Start server - read PORT from environment
 	port := os.Getenv("PORT")
@@ -133,122 +120,29 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	html := `
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Go Web Server</title>
-	<style>
-		body {
-			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-			max-width: 800px;
-			margin: 50px auto;
-			padding: 20px;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			color: white;
-		}
-		.container {
-			background: rgba(255, 255, 255, 0.1);
-			backdrop-filter: blur(10px);
-			border-radius: 20px;
-			padding: 40px;
-			box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-		}
-		h1 { margin-top: 0; }
-		.endpoint {
-			background: rgba(255, 255, 255, 0.2);
-			padding: 15px;
-			margin: 10px 0;
-			border-radius: 10px;
-			font-family: 'Courier New', monospace;
-		}
-		a {
-			color: #fff;
-			text-decoration: none;
-			font-weight: bold;
-		}
-		a:hover { text-decoration: underline; }
-	</style>
-</head>
-<body>
-	<div class="container">
-		<h1>🚀 Go Web Server</h1>
-		<p>Welcome to your Go web server!</p>
-		<h2>Available Endpoints:</h2>
-		<div class="endpoint">
-			<strong>GET</strong> <a href="/health">/health</a> - Health check endpoint
-		</div>
-		<div class="endpoint">
-			<strong>GET</strong> <a href="/api/hello">/api/hello</a> - Hello API endpoint
-		</div>
-	</div>
-</body>
-</html>
-	`
-	fmt.Fprint(w, html)
-}
-
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	response := HealthResponse{
-		Status:    "healthy",
-		Timestamp: time.Now(),
-	}
-	json.NewEncoder(w).Encode(response)
-}
-
-func helloHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	message := Message{
-		Message: "Hello from Go web server!",
-		Time:    time.Now(),
-	}
-	json.NewEncoder(w).Encode(message)
-}
-
-func breatheHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/breathe" {
-		http.NotFound(w, r)
-		return
-	}
-
-	html := `In progress...`
-	fmt.Fprint(w, html)
-}
-
-func readHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/read" {
-		http.NotFound(w, r)
-		return
-	}
-
-	// Convert parsed works to a map for JSON encoding
-	documentsMap := make(map[string]Document)
-	for file, document := range parsedDocuments {
-		documentsMap[file] = document
-	}
-
-	// Marshal to JSON and convert to template.JS for safe embedding
-	documentsJSON, err := json.Marshal(documentsMap)
+	tmpl, err := template.ParseFiles(
+		filepath.Join("web", "templates", "base.html"),
+		filepath.Join("web", "templates", "home.html"),
+	)
 	if err != nil {
-		http.Error(w, "Failed to prepare data", http.StatusInternalServerError)
-		return
-	}
-
-	data := ReadPageData{
-		DocumentsData: template.JS(documentsJSON),
-	}
-
-	tmpl, err := template.ParseFiles("templates/read.html")
-	if err != nil {
+		slog.Error("Failed to load templates", "error", err)
 		http.Error(w, "Failed to load template", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.Execute(w, data); err != nil {
+	if err := tmpl.ExecuteTemplate(w, "home", nil); err != nil {
+		slog.Error("Failed to render template", "error", err)
 		http.Error(w, "Failed to render template", http.StatusInternalServerError)
 		return
 	}
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	response := typesgo.HealthResponse{
+		Status:    "healthy",
+		Timestamp: time.Now(),
+	}
+	json.NewEncoder(w).Encode(response)
 }

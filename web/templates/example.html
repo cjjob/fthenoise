@@ -1,0 +1,17 @@
+{{define "example"}}
+{{template "base" .}}
+{{end}}
+
+{{define "head"}}
+<title>Example</title>
+<link rel="stylesheet" href="/static/css/style.css">
+{{end}}
+
+{{define "content"}}
+<div class="container">
+	<input type="text" id="nameInput" placeholder="Enter name">
+	<button onclick="greet()">Greet</button>
+	<h1 id="display"></h1>
+</div>
+<script src="/static/js/app.js"></script>
+{{end}}
